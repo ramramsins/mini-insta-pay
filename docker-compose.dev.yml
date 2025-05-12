@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongo-dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data_dev:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=dev_user
+      - MONGO_INITDB_ROOT_PASSWORD=dev_password
+
+  user-service:
+    build: 
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URL=mongodb://dev_user:dev_password@mongo:27017
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    depends_on:
+      - mongo
+
+  transaction-service:
+    build: 
+      context: ./transaction-service
+      dockerfile: Dockerfile
+    container_name: transaction-service-dev
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://dev_user:dev_password@mongo:27017
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    depends_on:
+      - mongo
+
+  reporting-service:
+    build: 
+      context: ./reporting-service
+      dockerfile: Dockerfile
+    container_name: reporting-service-dev
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_URL=mongodb://dev_user:dev_password@mongo:27017
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    depends_on:
+      - mongo
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data_dev:/prometheus
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data_dev:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    container_name: elasticsearch-dev
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data_dev:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.9.3
+    container_name: kibana-dev
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+volumes:
+  mongo_data_dev:
+  prometheus_data_dev:
+  grafana_data_dev:
+  elasticsearch_data_dev: 

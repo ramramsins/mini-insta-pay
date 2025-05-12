@@ -1,17 +1,17 @@
-from pydantic import BaseModel
-from fastapi import APIRouter
-
-router = APIRouter()
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 class UserRegister(BaseModel):
     username: str
-    email: str
+    email: EmailStr
     password: str
 
 class UserLogin(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
-@router.get("/login")
-def login_info():
-    return {"msg": "Please use POST to log in"}
+class UserResponse(BaseModel):
+    username: str
+    email: EmailStr
+    id: Optional[str] = None
+    balance: Optional[float] = 1000  # Default balance for new users

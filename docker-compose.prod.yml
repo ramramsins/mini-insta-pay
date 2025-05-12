@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongo-prod
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data_prod:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=prod_user
+      - MONGO_INITDB_ROOT_PASSWORD=prod_password
+    restart: always
+
+  user-service:
+    build: 
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service-prod
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URL=mongodb://prod_user:prod_password@mongo:27017
+      - ENVIRONMENT=production
+      - LOG_LEVEL=WARNING
+    depends_on:
+      - mongo
+    restart: always
+    deploy:
+      replicas: 2
+
+  transaction-service:
+    build: 
+      context: ./transaction-service
+      dockerfile: Dockerfile
+    container_name: transaction-service-prod
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://prod_user:prod_password@mongo:27017
+      - ENVIRONMENT=production
+      - LOG_LEVEL=WARNING
+    depends_on:
+      - mongo
+    restart: always
+    deploy:
+      replicas: 2
+
+  reporting-service:
+    build: 
+      context: ./reporting-service
+      dockerfile: Dockerfile
+    container_name: reporting-service-prod
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_URL=mongodb://prod_user:prod_password@mongo:27017
+      - ENVIRONMENT=production
+      - LOG_LEVEL=WARNING
+    depends_on:
+      - mongo
+    restart: always
+    deploy:
+      replicas: 2
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus-prod
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data_prod:/prometheus
+    restart: always
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data_prod:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    container_name: elasticsearch-prod
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data_prod:/usr/share/elasticsearch/data
+    restart: always
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.9.3
+    container_name: kibana-prod
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    restart: always
+
+volumes:
+  mongo_data_prod:
+  prometheus_data_prod:
+  grafana_data_prod:
+  elasticsearch_data_prod: 
